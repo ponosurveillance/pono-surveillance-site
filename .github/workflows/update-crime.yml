@@ -8,7 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,14 +21,12 @@ jobs:
         run: npm install
 
       - name: Build crime data
-        env:
-          SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}
-        run: npm run build:crime
+        run: node scripts/build-crime.js
 
       - name: Commit and push updated crime.json
         run: |
-          git config user.name "GitHub Action"
+          git config user.name "actions-user"
           git config user.email "actions@github.com"
           git add public/data/crime.json
-          git commit -m "Nightly crime data update [skip ci]" || echo "No changes to commit"
+          git commit -m "Nightly crime data update [skip actions]" || echo "Nothing to commit"
           git push
