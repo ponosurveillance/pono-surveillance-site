@@ -1,0 +1,8 @@
+{
+  "name": "pono-surveillance-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:crime": "node scripts/build-crime.js"
+  }
+}
