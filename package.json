@@ -1,10 +1,42 @@
 {
+  "name": "pono-surveillance-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Official website for Pono Surveillance — Hawaii and U.S. security camera systems, AI analytics, LPR, installation, and monitoring.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "build:sitemaps": "node scripts/build-sitemaps.js",
-    "postbuild": "npm run build:sitemaps"
-  }
+    "postbuild": "npm run build:sitemaps",
+    "format": "prettier --write .",
+    "analyze": "cross-env ANALYZE=true next build"
+  },
+  "dependencies": {
+    "next": "14.2.3",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.3",
+    "prettier": "^3.2.5",
+    "cross-env": "^7.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "homepage": "https://www.ponosurveillance.com",
+  "author": "Pono Surveillance",
+  "license": "MIT",
+  "keywords": [
+    "Pono Surveillance",
+    "security cameras",
+    "AI surveillance",
+    "Hawaii security systems",
+    "night vision cameras",
+    "LPR systems",
+    "4K surveillance"
+  ]
 }
