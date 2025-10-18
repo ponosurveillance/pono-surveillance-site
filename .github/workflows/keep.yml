@@ -1,0 +1,7 @@
+name: Keep workflows folder
+on: workflow_dispatch
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "This keeps the workflows folder alive"
