@@ -1,106 +1,36 @@
 name: Build & ping sitemaps
 
 on:
-  schedule: [ { cron: "12 4 * * *" } ]   # daily 04:12 UTC
+  schedule: [ { cron: "12 4 * * *" } ]  # every day 04:12 UTC
   workflow_dispatch:
 
 jobs:
   sitemap:
     runs-on: ubuntu-latest
-
-    env:
-      BASE_URL: "v0-apartment-surveillance-package.vercel.app   # <-- put your domain here
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Node
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # Build both sitemaps with a dependency-free script
       - name: Build sitemaps
+        env:
+          SITE_DOMAIN: https://v0-apartment-surveillance-package.vercel.app
+        run: node scripts/build-sitemaps.js
+
+      - name: Commit sitemaps
         run: |
-          node <<'NODE'
-          import fs from "node:fs";
-          import path from "node:path";
-
-          const BASE = process.env.BASE_URL.replace(/\/+$/, ""); // no trailing slash
-
-          // ----- Load location slugs from your aliases file -----
-          const aliasPath = path.join(process.cwd(), "scripts", "city-aliases.json");
-          let locationSlugs = [];
-          try {
-            const raw = fs.readFileSync(aliasPath, "utf8");
-            const aliases = JSON.parse(raw);
-            // keys like "long-beach-ca" are the canonical page slugs
-            locationSlugs = Object.keys(aliases);
-          } catch (e) {
-            console.error("Could not read scripts/city-aliases.json:", e);
-            process.exit(1);
-          }
-
-          // ----- Core URLs for the main sitemap -----
-          const corePaths = [
-            "/", "/about", "/blog", "/contact",
-            "/services", "/trailers", "/categories", "/learn"
-          ];
-
-          // Utility
-          const esc = (s) =>
-            s.replace(/&/g, "&amp;")
-             .replace(/</g, "&lt;")
-             .replace(/>/g, "&gt;")
-             .replace(/"/g, "&quot;")
-             .replace(/'/g, "&apos;");
-
-          const urlTag = (loc, freq="weekly", priority="0.7") => `
-            <url>
-              <loc>${esc(loc)}</loc>
-              <changefreq>${freq}</changefreq>
-              <priority>${priority}</priority>
-            </url>`.trim();
-
-          // ----- Build /public/sitemap.xml -----
-          const sitemapXml =
-            `<?xml version="1.0" encoding="UTF-8"?>` +
-            `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` +
-              corePaths.map(p => urlTag(`${BASE}${p}`,"weekly","0.8")).join("") +
-            `</urlset>`;
-
-          // ----- Build /public/sitemap-locations.xml -----
-          const locationUrls = locationSlugs.map(slug => `${BASE}/locations/${slug}`);
-          const locationsXml =
-            `<?xml version="1.0" encoding="UTF-8"?>` +
-            `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` +
-              locationUrls.map(u => urlTag(u,"weekly","0.6")).join("") +
-            `</urlset>`;
-
-          // Ensure /public exists
-          const outDir = path.join(process.cwd(), "public");
-          if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
-
-          fs.writeFileSync(path.join(outDir, "sitemap.xml"), sitemapXml);
-          fs.writeFileSync(path.join(outDir, "sitemap-locations.xml"), locationsXml);
-
-          console.log("✅ Wrote public/sitemap.xml and public/sitemap-locations.xml");
-          NODE
-
-      - name: Commit & push
-        run: |
-          git config user.name "GitHub Action"
+          git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add public/sitemap.xml public/sitemap-locations.xml
-          git commit -m "chore: update sitemaps [skip ci]" || echo "No changes"
+          git commit -m "chore: update sitemaps [skip ci]" || echo "no changes"
           git pull --rebase origin main
           git push
 
-      # Optional: ping search engines so they recrawl your sitemaps
-      - name: Ping search engines
+      - name: Ping Google
         run: |
-          curl -s "https://www.google.com/ping?sitemap=$BASE_URL/sitemap.xml" || true
-          curl -s "https://www.google.com/ping?sitemap=$BASE_URL/sitemap-locations.xml" || true
-          curl -s "https://www.bing.com/ping?sitemap=$BASE_URL/sitemap.xml" || true
-          curl -s "https://www.bing.com/ping?sitemap=$BASE_URL/sitemap-locations.xml" || true
+          curl -s "https://www.google.com/ping?sitemap=https://v0-apartment-surveillance-package.vercel.app/sitemap.xml" || true
+          curl -s "https://www.google.com/ping?sitemap=https://v0-apartment-surveillance-package.vercel.app/sitemap-locations.xml" || true
