@@ -1,0 +1,39 @@
+name: Update crime.json nightly
+
+on:
+  schedule:
+    - cron: "0 4 * * *"   # 4:00 UTC daily
+  workflow_dispatch:       # allow manual run
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build crime data
+        env:
+          SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}
+        run: |
+          npm run -s build:crime
+
+      - name: Commit and push updated crime.json
+        run: |
+          git config user.name "actions-user"
+          git config user.email "actions@github.com"
+          git add public/data/crime.json
+          git commit -m "Nightly crime data update [skip ci]" || echo "Nothing to commit"
+          git pull --rebase origin main
+          git push origin main
