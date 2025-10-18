@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://v0-apartment-surveillance-package.vercel.app/sitemap.xml
-Sitemap: https://v0-apartment-surveillance-package.vercel.app/sitemap-locations.xml
+# IMPORTANT: keep the canonical host here
+Sitemap: https://www.ponosurveillance.com/sitemap.xml
+Host: https://www.ponosurveillance.com
