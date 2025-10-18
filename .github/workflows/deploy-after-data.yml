@@ -1,0 +1,20 @@
+name: Deploy after crime data update
+
+on:
+  workflow_run:
+    workflows: ["Update crime.json nightly"]
+    types: [completed]
+
+jobs:
+  deploy-if-success:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel/V0 Deploy Hook
+        run: |
+          curl -fsS -X POST "$V0_BUILD_HOOK" \
+            -H "Content-Type: application/json" \
+            -d "{\"source\":\"github-actions\",\"reason\":\"crime-data-update\",\"run_id\":\"${{ github.event.workflow_run.id }}\"}" \
+            && echo "✅ Hook sent" || (echo "❌ Hook failed" && exit 1)
+        env:
+          V0_BUILD_HOOK: ${{ secrets.V0_BUILD_HOOK }}
