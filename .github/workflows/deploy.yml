@@ -1,0 +1,34 @@
+name: Trigger V0/Vercel build
+
+on:
+  push:
+    branches: [ main ]
+    # Only kick off builds when relevant files change (adjust as you like)
+    paths:
+      - 'public/**'
+      - 'scripts/**'
+      - 'package.json'
+      - '.github/workflows/**'
+  schedule:
+    # Daily at 09:00 UTC (adjust if you want)
+    - cron: '0 9 * * *'
+  workflow_dispatch: {} # manual run from Actions tab
+
+jobs:
+  ping-vercel-hook:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check secret exists
+        run: |
+          if [ -z "${{ secrets.V0_BUILD_HOOK }}" ]; then
+            echo "❌ Missing secret: V0_BUILD_HOOK"; exit 1; 
+          fi
+
+      - name: Trigger Vercel/V0 Deploy Hook
+        run: |
+          curl -fsS -X POST "$V0_BUILD_HOOK" \
+            -H "Content-Type: application/json" \
+            -d "{\"source\":\"github-actions\",\"repo\":\"${GITHUB_REPOSITORY}\",\"commit\":\"${GITHUB_SHA}\"}" \
+            && echo "✅ Hook sent" || (echo "❌ Hook failed" && exit 1)
+        env:
+          V0_BUILD_HOOK: ${{ secrets.V0_BUILD_HOOK }}
