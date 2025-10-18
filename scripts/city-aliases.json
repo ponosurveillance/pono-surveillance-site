@@ -1,0 +1,20 @@
+{
+  "lahaina-hi": "honolulu-hi",
+  "kihei-hi": "honolulu-hi",
+  "kailua-hi": "honolulu-hi",
+  "kaneohe-hi": "honolulu-hi",
+  "waipahu-hi": "honolulu-hi",
+  "kahului-hi": "honolulu-hi",
+  "hilo-hi": "honolulu-hi",
+
+  "long-beach-ca": "los-angeles-ca",
+  "anaheim-ca": "los-angeles-ca",
+  "riverside-ca": "los-angeles-ca",
+  "oakland-ca": "san-francisco-ca",
+  "san-jose-ca": "san-francisco-ca",
+
+  "tacoma-wa": "seattle-wa",
+  "scottsdale-az": "phoenix-az",
+  "aurora-co": "denver-co",
+  "princeton-tx": "dallas-tx"
+}
