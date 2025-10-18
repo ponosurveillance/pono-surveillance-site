@@ -1,18 +1,18 @@
-// lighthouse.config.js
+/** @type {import('lighthouse').Flags} */
 module.exports = {
   ci: {
     collect: {
+      // Use the canonical domain for audits
+      url: ["https://www.ponosurveillance.com/"],
       numberOfRuns: 1,
-      url: [
-        'https://v0-apartment-surveillance-package.vercel.app/',
-        'https://v0-apartment-surveillance-package.vercel.app/locations',
-      ],
-      settings: {
-        chromeFlags: '--no-sandbox',
-      },
     },
-    upload: {
-      target: 'temporary-public-storage',
+    assert: {
+      assertions: {
+        "categories:performance": ["warn", { minScore: 0.85 }],
+        "categories:accessibility": ["warn", { minScore: 0.9 }],
+        "categories:best-practices": ["warn", { minScore: 0.9 }],
+        "categories:seo": ["warn", { minScore: 0.95 }],
+      },
     },
   },
 };
