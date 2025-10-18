@@ -1,8 +1,10 @@
 {
-  "name": "pono-surveillance-site",
-  "private": true,
-  "type": "module",
   "scripts": {
-    "build:crime": "node scripts/build-crime.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "build:sitemaps": "node scripts/build-sitemaps.js",
+    "postbuild": "npm run build:sitemaps"
   }
 }
