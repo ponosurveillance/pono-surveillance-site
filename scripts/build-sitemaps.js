@@ -1,58 +1,54 @@
-// scripts/build-sitemaps.js
-// ESM-friendly. No external deps.
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+/**
+ * Simple sitemap generator that:
+ *  - reads the base URL from env (NEXT_PUBLIC_SITE_URL) with a hardcoded fallback
+ *  - includes a small set of common routes by default
+ *  - writes /public/sitemap.xml
+ *
+ * Extend the `routes` array with real dynamic URLs from your CMS, products, blog, etc.
+ */
+const fs = require("fs");
+const path = require("path");
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+  "https://www.ponosurveillance.com";
 
-// Change to your production site if/when you add a custom domain
-const SITE = process.env.SITE_DOMAIN || "https://v0-apartment-surveillance-package.vercel.app";
+const now = new Date().toISOString();
 
-// read locations
-const locPath = path.join(__dirname, "locations.json");
-const locations = JSON.parse(fs.readFileSync(locPath, "utf8"));
-
-// ensure public dir exists
-const publicDir = path.join(__dirname, "..", "public");
-if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
-
-// base pages for main sitemap
-const now = new Date().toISOString().slice(0, 10);
-const pages = [
-  { url: "/", priority: 1.0 },
-  { url: "/locations", priority: 0.9 },
-  { url: "/blog", priority: 0.7 },
-  { url: "/contact", priority: 0.7 },
-  { url: "/services", priority: 0.7 }
-];
-
-function urlset(items) {
-  const body = items.map(i => `
-  <url>
-    <loc>${SITE}${i.url}</loc>
-    <lastmod>${now}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>${i.priority ?? 0.8}</priority>
-  </url>`).join("");
-
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${body}
-</urlset>`;
-}
-
-function write(file, xml) {
-  fs.writeFileSync(path.join(publicDir, file), xml);
-  console.log("wrote", file);
-}
-
-// main sitemap
-write("sitemap.xml", urlset(pages));
-
-// locations sitemap
-const locationItems = locations.map(slug => ({
-  url: `/locations/${slug}`,
-  priority: 0.8
+// TODO: Add your real URLs here.
+// You can fetch products/posts and push into this array before writing.
+const routes = [
+  "/",
+  "/about",
+  "/contact",
+  "/services",
+  "/products",
+  "/blog",
+].map((p) => ({
+  url: `${SITE_URL}${p}`,
+  lastmod: now,
+  changefreq: "daily",
+  priority: p === "/" ? "1.0" : "0.7",
 }));
-write("sitemap-locations.xml", urlset(locationItems));
+
+const xml =
+  `<?xml version="1.0" encoding="UTF-8"?>` +
+  `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` +
+  routes
+    .map(
+      (r) => `
+  <url>
+    <loc>${r.url}</loc>
+    <lastmod>${r.lastmod}</lastmod>
+    <changefreq>${r.changefreq}</changefreq>
+    <priority>${r.priority}</priority>
+  </url>`
+    )
+    .join("") +
+  `\n</urlset>\n`;
+
+const outPath = path.join(process.cwd(), "public", "sitemap.xml");
+fs.writeFileSync(outPath, xml, "utf8");
+console.log(`✓ Wrote sitemap: ${outPath}`);
+console.log(`✓ Using base URL: ${SITE_URL}`);
+
