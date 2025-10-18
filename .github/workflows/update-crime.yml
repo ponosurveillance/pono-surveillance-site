@@ -1,8 +1,0 @@
-      - name: Commit and push updated crime.json
-        run: |
-          git config user.name "actions-user"
-          git config user.email "actions@github.com"
-          git add public/data/crime.json
-          git commit -m "Nightly crime data update [skip actions]" || echo "Nothing to commit"
-          git pull --rebase origin main
-          git push
