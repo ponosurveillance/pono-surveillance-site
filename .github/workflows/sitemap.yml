@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      BASE_URL: "https://www.ponosurveillance.com"   # <-- put your domain here
+      BASE_URL: "v0-apartment-surveillance-package.vercel.app   # <-- put your domain here
 
     steps:
       - name: Checkout
