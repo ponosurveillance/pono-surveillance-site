@@ -1,0 +1,20 @@
+name: Lighthouse CI
+
+on:
+  schedule: [ { cron: "30 4 * * *" } ]
+  workflow_dispatch:
+
+jobs:
+  lhci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Lighthouse
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          urls: |
+            https://YOUR_DOMAIN/
+            https://YOUR_DOMAIN/locations/honolulu-hi
+            https://YOUR_DOMAIN/locations/los-angeles-ca
+          configPath: ./lighthouse.config.js
+          uploadArtifacts: true
+          temporaryPublicStorage: true
