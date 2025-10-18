@@ -1,0 +1,57 @@
+name: Build & ping sitemaps
+
+on:
+  schedule: [ { cron: "12 4 * * *" } ]  # daily 04:12 UTC
+  workflow_dispatch:
+
+jobs:
+  sitemap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm i xmlbuilder2
+      - name: Build sitemaps
+        run: |
+          node -e '
+            const { create } = require("xmlbuilder2");
+            const fs = require("fs");
+            const base = "https://YOUR_DOMAIN";
+            const now = new Date().toISOString();
+
+            const aliases = JSON.parse(fs.readFileSync("scripts/city-aliases.json","utf8"));
+            const locUrls = Object.keys(aliases).map(k=>`${base}/locations/${k}`);
+
+            const urlset = (urls) => create({ version:"1.0" })
+              .ele("urlset", { xmlns:"http://www.sitemaps.org/schemas/sitemap/0.9" })
+              .import(urls.map(u=>({ url: [{ loc: u }, { lastmod: now }, { changefreq:"daily" }, { priority:"0.8" }] })))
+              .end({ prettyPrint:true });
+
+            fs.mkdirSync("public", { recursive:true });
+            fs.writeFileSync("public/sitemap-locations.xml", urlset(locUrls));
+
+            const index = create({ version:"1.0" })
+              .ele("sitemapindex", { xmlns:"http://www.sitemaps.org/schemas/sitemap/0.9" })
+              .ele("sitemap").ele("loc").txt(`${base}/sitemap-locations.xml`).up().up()
+              .end({ prettyPrint:true });
+
+            fs.writeFileSync("public/sitemap.xml", index);
+          '
+      - name: Commit & push
+        run: |
+          git config user.name "actions-user"
+          git config user.email "actions@github.com"
+          git add public/sitemap*.xml
+          git commit -m "chore: update sitemaps [skip ci]" || echo "No changes"
+          git pull --rebase origin main
+          git push
+      - name: Ping search engines
+        run: |
+          curl -s "https://www.google.com/ping?sitemap=https://YOUR_DOMAIN/sitemap.xml" || true
+          curl -s "https://www.bing.com/ping?sitemap=https://YOUR_DOMAIN/sitemap.xml" || true
+      # Optional V0 redeploy
+      # - name: Trigger V0 redeploy
+      #   run: curl -X POST "$V0_BUILD_HOOK"
+      #   env:
+      #     V0_BUILD_HOOK: ${{ secrets.V0_BUILD_HOOK }}
