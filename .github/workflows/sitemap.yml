@@ -1,36 +1,38 @@
-name: Build & ping sitemaps
+name: Build & Commit Sitemap
 
 on:
-  schedule: [ { cron: "12 4 * * *" } ]  # every day 04:12 UTC
+  push:
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
-  sitemap:
+  build-sitemap:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Use Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: "20"
 
-      - name: Build sitemaps
+      - name: Install deps
+        run: npm ci
+
+      - name: Generate sitemap
         env:
-          SITE_DOMAIN: https://v0-apartment-surveillance-package.vercel.app
-        run: node scripts/build-sitemaps.js
+          NEXT_PUBLIC_SITE_URL: https://www.ponosurveillance.com
+        run: npm run build:sitemaps
 
-      - name: Commit sitemaps
+      - name: Commit sitemap
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add public/sitemap.xml public/sitemap-locations.xml
-          git commit -m "chore: update sitemaps [skip ci]" || echo "no changes"
-          git pull --rebase origin main
-          git push
-
-      - name: Ping Google
-        run: |
-          curl -s "https://www.google.com/ping?sitemap=https://v0-apartment-surveillance-package.vercel.app/sitemap.xml" || true
-          curl -s "https://www.google.com/ping?sitemap=https://v0-apartment-surveillance-package.vercel.app/sitemap-locations.xml" || true
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add public/sitemap.xml
+            git commit -m "chore: update sitemap.xml"
+            git push
+          else
+            echo "No changes to commit."
+          fi
