@@ -1,57 +1,106 @@
 name: Build & ping sitemaps
 
 on:
-  schedule: [ { cron: "12 4 * * *" } ]  # daily 04:12 UTC
+  schedule: [ { cron: "12 4 * * *" } ]   # daily 04:12 UTC
   workflow_dispatch:
 
 jobs:
   sitemap:
     runs-on: ubuntu-latest
+
+    env:
+      BASE_URL: "https://www.ponosurveillance.com"   # <-- put your domain here
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm i xmlbuilder2
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Build both sitemaps with a dependency-free script
       - name: Build sitemaps
         run: |
-          node -e '
-            const { create } = require("xmlbuilder2");
-            const fs = require("fs");
-            const base = "https://YOUR_DOMAIN";
-            const now = new Date().toISOString();
+          node <<'NODE'
+          import fs from "node:fs";
+          import path from "node:path";
 
-            const aliases = JSON.parse(fs.readFileSync("scripts/city-aliases.json","utf8"));
-            const locUrls = Object.keys(aliases).map(k=>`${base}/locations/${k}`);
+          const BASE = process.env.BASE_URL.replace(/\/+$/, ""); // no trailing slash
 
-            const urlset = (urls) => create({ version:"1.0" })
-              .ele("urlset", { xmlns:"http://www.sitemaps.org/schemas/sitemap/0.9" })
-              .import(urls.map(u=>({ url: [{ loc: u }, { lastmod: now }, { changefreq:"daily" }, { priority:"0.8" }] })))
-              .end({ prettyPrint:true });
+          // ----- Load location slugs from your aliases file -----
+          const aliasPath = path.join(process.cwd(), "scripts", "city-aliases.json");
+          let locationSlugs = [];
+          try {
+            const raw = fs.readFileSync(aliasPath, "utf8");
+            const aliases = JSON.parse(raw);
+            // keys like "long-beach-ca" are the canonical page slugs
+            locationSlugs = Object.keys(aliases);
+          } catch (e) {
+            console.error("Could not read scripts/city-aliases.json:", e);
+            process.exit(1);
+          }
 
-            fs.mkdirSync("public", { recursive:true });
-            fs.writeFileSync("public/sitemap-locations.xml", urlset(locUrls));
+          // ----- Core URLs for the main sitemap -----
+          const corePaths = [
+            "/", "/about", "/blog", "/contact",
+            "/services", "/trailers", "/categories", "/learn"
+          ];
 
-            const index = create({ version:"1.0" })
-              .ele("sitemapindex", { xmlns:"http://www.sitemaps.org/schemas/sitemap/0.9" })
-              .ele("sitemap").ele("loc").txt(`${base}/sitemap-locations.xml`).up().up()
-              .end({ prettyPrint:true });
+          // Utility
+          const esc = (s) =>
+            s.replace(/&/g, "&amp;")
+             .replace(/</g, "&lt;")
+             .replace(/>/g, "&gt;")
+             .replace(/"/g, "&quot;")
+             .replace(/'/g, "&apos;");
 
-            fs.writeFileSync("public/sitemap.xml", index);
-          '
+          const urlTag = (loc, freq="weekly", priority="0.7") => `
+            <url>
+              <loc>${esc(loc)}</loc>
+              <changefreq>${freq}</changefreq>
+              <priority>${priority}</priority>
+            </url>`.trim();
+
+          // ----- Build /public/sitemap.xml -----
+          const sitemapXml =
+            `<?xml version="1.0" encoding="UTF-8"?>` +
+            `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` +
+              corePaths.map(p => urlTag(`${BASE}${p}`,"weekly","0.8")).join("") +
+            `</urlset>`;
+
+          // ----- Build /public/sitemap-locations.xml -----
+          const locationUrls = locationSlugs.map(slug => `${BASE}/locations/${slug}`);
+          const locationsXml =
+            `<?xml version="1.0" encoding="UTF-8"?>` +
+            `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` +
+              locationUrls.map(u => urlTag(u,"weekly","0.6")).join("") +
+            `</urlset>`;
+
+          // Ensure /public exists
+          const outDir = path.join(process.cwd(), "public");
+          if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+
+          fs.writeFileSync(path.join(outDir, "sitemap.xml"), sitemapXml);
+          fs.writeFileSync(path.join(outDir, "sitemap-locations.xml"), locationsXml);
+
+          console.log("✅ Wrote public/sitemap.xml and public/sitemap-locations.xml");
+          NODE
+
       - name: Commit & push
         run: |
-          git config user.name "actions-user"
+          git config user.name "GitHub Action"
           git config user.email "actions@github.com"
-          git add public/sitemap*.xml
+          git add public/sitemap.xml public/sitemap-locations.xml
           git commit -m "chore: update sitemaps [skip ci]" || echo "No changes"
           git pull --rebase origin main
           git push
+
+      # Optional: ping search engines so they recrawl your sitemaps
       - name: Ping search engines
         run: |
-          curl -s "https://www.google.com/ping?sitemap=https://YOUR_DOMAIN/sitemap.xml" || true
-          curl -s "https://www.bing.com/ping?sitemap=https://YOUR_DOMAIN/sitemap.xml" || true
-      # Optional V0 redeploy
-      # - name: Trigger V0 redeploy
-      #   run: curl -X POST "$V0_BUILD_HOOK"
-      #   env:
-      #     V0_BUILD_HOOK: ${{ secrets.V0_BUILD_HOOK }}
+          curl -s "https://www.google.com/ping?sitemap=$BASE_URL/sitemap.xml" || true
+          curl -s "https://www.google.com/ping?sitemap=$BASE_URL/sitemap-locations.xml" || true
+          curl -s "https://www.bing.com/ping?sitemap=$BASE_URL/sitemap.xml" || true
+          curl -s "https://www.bing.com/ping?sitemap=$BASE_URL/sitemap-locations.xml" || true
